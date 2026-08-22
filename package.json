@@ -1,0 +1,16 @@
+{
+  "name": "dahua-gchat-middleware",
+  "version": "1.0.0",
+  "description": "Middleware Node.js untuk integrasi Dahua DSS V8.7 Face Recognition Blacklist dengan notifikasi Google Chat",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "moment": "^2.30.1"
+  }
+}
