@@ -1,6 +1,6 @@
-const axios = require('axios');
 const config = require('./config');
 const { getToken } = require('./auth');
+const dahuaClient = require('./dahuaClient');
 
 async function addPersonToBlacklist(personId, firstName, base64Image) {
     const payload = {
@@ -25,7 +25,7 @@ async function addPersonToBlacklist(personId, firstName, base64Image) {
         },
     };
 
-    const res = await axios.post(`${config.dahuaBaseUrl}/obms/api/v1.1/acs/person`, payload, {
+    const res = await dahuaClient.post(`${config.dahuaBaseUrl}/obms/api/v1.1/acs/person`, payload, {
         headers: { 'X-Subject-Token': getToken() },
     });
     console.log('[Dahua] Successfully added person to Blacklist:', res.data);
@@ -39,7 +39,7 @@ async function subscribeAlarm() {
         signature: config.dahuaSubscribeSignature,
     };
 
-    const res = await axios.post(`${config.dahuaBaseUrl}/brms/api/v1.1/push-data/alarm/subscribe`, payload, {
+    const res = await dahuaClient.post(`${config.dahuaBaseUrl}/brms/api/v1.1/push-data/alarm/subscribe`, payload, {
         headers: { 'X-Subject-Token': getToken() },
     });
     console.log('[Dahua] Successfully subscribed to alarm notifications:', res.data);
@@ -47,7 +47,7 @@ async function subscribeAlarm() {
 }
 
 async function getAlarmFaceRecognitionInfo(alarmCode, deviceCode) {
-    const res = await axios.post(
+    const res = await dahuaClient.post(
         `${config.dahuaBaseUrl}/eams/api/v1.0/BRM/Alarm/GetAlarmFaceRecognitionInfo`,
         {
             data: {

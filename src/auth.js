@@ -1,6 +1,6 @@
-const axios = require('axios');
 const crypto = require('crypto');
 const config = require('./config');
+const dahuaClient = require('./dahuaClient');
 
 let dahuaToken = '';
 
@@ -12,7 +12,7 @@ function getToken() {
 
 async function loginDahua() {
     try {
-        await axios.post(`${config.dahuaBaseUrl}/brms/api/v1.0/accounts/authorize`, {
+        await dahuaClient.post(`${config.dahuaBaseUrl}/brms/api/v1.0/accounts/authorize`, {
             userName: config.dahuaUsername,
         });
     } catch (error) {
@@ -25,7 +25,7 @@ async function loginDahua() {
             const temp4 = md5(`${config.dahuaUsername}:${realm}:${temp3}`);
             const signature = md5(`${temp4}:${randomKey}`);
 
-            const loginRes = await axios.post(`${config.dahuaBaseUrl}/brms/api/v1.0/accounts/authorize`, {
+            const loginRes = await dahuaClient.post(`${config.dahuaBaseUrl}/brms/api/v1.0/accounts/authorize`, {
                 userName: config.dahuaUsername,
                 randomKey,
                 signature,
