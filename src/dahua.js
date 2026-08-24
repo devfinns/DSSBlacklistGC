@@ -60,7 +60,8 @@ async function getAlarmFaceRecognitionInfo(alarmCode, deviceCode, alarmDate) {
             headers: { 'X-Subject-Token': getToken() },
         }
     );
-    return res.data.data;
+    console.log('[Dahua] GetAlarmFaceRecognitionInfo response:', JSON.stringify(res.data));
+    return res.data.data || {};
 }
 
 module.exports = { addPersonToBlacklist, subscribeAlarm, getAlarmFaceRecognitionInfo };
