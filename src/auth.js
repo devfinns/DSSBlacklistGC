@@ -3,6 +3,7 @@ const config = require('./config');
 const dahuaClient = require('./dahuaClient');
 
 let dahuaToken = '';
+let dahuaCredential = '';
 let keepAliveTimer = null;
 let updateTokenTimer = null;
 
@@ -10,6 +11,10 @@ const md5 = (str) => crypto.createHash('md5').update(str).digest('hex');
 
 function getToken() {
     return dahuaToken;
+}
+
+function getCredential() {
+    return dahuaCredential;
 }
 
 function clearTimers() {
@@ -51,6 +56,9 @@ function scheduleTokenUpdate(tokenRateSeconds) {
                 headers: { 'X-Subject-Token': dahuaToken },
             });
             dahuaToken = res.data.data.token;
+            if (res.data.data.credential) {
+                dahuaCredential = res.data.data.credential;
+            }
             console.log('[Auth] Dahua token updated successfully.');
         } catch (error) {
             console.error('[Auth] Token update failed:', error.message);
@@ -80,6 +88,7 @@ async function loginDahua() {
             });
 
             dahuaToken = loginRes.data.token;
+            dahuaCredential = loginRes.data.credential;
             console.log('[Auth] Dahua login successful.');
 
             clearTimers();
@@ -98,4 +107,4 @@ async function loginDahua() {
     }
 }
 
-module.exports = { loginDahua, getToken, md5 };
+module.exports = { loginDahua, getToken, getCredential, md5 };
