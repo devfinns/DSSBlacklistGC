@@ -72,8 +72,18 @@ function formatBlacklistMessage(faceDetail, alarm, imageUrls) {
 }
 
 async function sendToGoogleChat(cardPayload) {
-    await axios.post(config.googleChatWebhookUrl, cardPayload);
-    console.log('[GChat] Notification sent to Google Chat successfully.');
+    const payloadSizeKb = (Buffer.byteLength(JSON.stringify(cardPayload)) / 1024).toFixed(1);
+    console.log(`[GChat] Sending payload (${payloadSizeKb} KB)...`);
+
+    try {
+        await axios.post(config.googleChatWebhookUrl, cardPayload);
+        console.log('[GChat] Notification sent to Google Chat successfully.');
+    } catch (error) {
+        if (error.response) {
+            console.error('[GChat] Google Chat rejected the payload. Status:', error.response.status, 'Body:', JSON.stringify(error.response.data));
+        }
+        throw error;
+    }
 }
 
 module.exports = { formatBlacklistMessage, sendToGoogleChat };

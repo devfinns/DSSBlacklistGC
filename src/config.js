@@ -25,5 +25,5 @@ module.exports = {
     // Public-facing base URL used to build image links (e.g. https://your-domain.com).
     // Until public access is set up, images are saved locally but links will not be reachable from Google Chat.
     publicBaseUrl: process.env.PUBLIC_BASE_URL || process.env.MIDDLEWARE_WEBHOOK_URL.replace(/\/api\/dahua\/push$/, ''),
-    imageMaxAgeDays: Number(process.env.IMAGE_MAX_AGE_DAYS) || 30,
+    imageMaxAgeHours: Number(process.env.IMAGE_MAX_AGE_HOURS) || 1,
 };

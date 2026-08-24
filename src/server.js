@@ -5,7 +5,7 @@ const { loginDahua } = require('./auth');
 const { subscribeAlarm, getAlarmFaceRecognitionInfo } = require('./dahua');
 const { formatBlacklistMessage, sendToGoogleChat } = require('./gchat');
 const { parseAlarmXml } = require('./alarmParser');
-const { IMAGES_DIR, downloadAndSaveImage, cleanupOldImages } = require('./imageStore');
+const { IMAGES_DIR, fetchImageAsDataUri, cleanupOldImages } = require('./imageStore');
 
 const app = express();
 app.use(express.text({ type: '*/*' }));
@@ -37,12 +37,12 @@ app.post('/api/dahua/push', async (req, res) => {
         const faceDetail = await getAlarmFaceRecognitionInfo(alarm.alarmCode, alarm.sourceCode, alarm.alarmTime);
 
         const [detectionImageUrl, repositoryImageUrl] = await Promise.all([
-            downloadAndSaveImage(faceDetail.detectionImageUrl || alarm.snapshotUrl).catch((error) => {
-                console.error('[Server] Failed to download detection image:', error.message);
+            fetchImageAsDataUri(faceDetail.detectionImageUrl || alarm.snapshotUrl).catch((error) => {
+                console.error('[Server] Failed to fetch detection image as data URI:', error.message);
                 return null;
             }),
-            downloadAndSaveImage(faceDetail.repositoryImageUrl).catch((error) => {
-                console.error('[Server] Failed to download repository image:', error.message);
+            fetchImageAsDataUri(faceDetail.repositoryImageUrl).catch((error) => {
+                console.error('[Server] Failed to fetch repository image as data URI:', error.message);
                 return null;
             }),
         ]);

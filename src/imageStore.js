@@ -30,6 +30,21 @@ async function downloadAndSaveImage(dahuaImageUrl) {
     return `${config.publicBaseUrl}/images/${fileName}`;
 }
 
+// Experimental: fetch the image and return it as a base64 data URI instead of
+// saving it to disk, to test whether Google Chat cardsV2 accepts data: URIs
+// as an imageUrl value (no hosting/reachability required if it works).
+async function fetchImageAsDataUri(dahuaImageUrl) {
+    if (!dahuaImageUrl) {
+        return null;
+    }
+
+    const response = await dahuaClient.get(withCredential(dahuaImageUrl), { responseType: 'arraybuffer' });
+    const base64 = Buffer.from(response.data).toString('base64');
+    const contentType = response.headers['content-type'] || 'image/jpeg';
+
+    return `data:${contentType};base64,${base64}`;
+}
+
 function cleanupOldImages() {
     const maxAgeMs = config.imageMaxAgeDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
@@ -48,4 +63,4 @@ function cleanupOldImages() {
     console.log(`[ImageStore] Cleanup complete. Removed ${removedCount} image(s) older than ${config.imageMaxAgeDays} days.`);
 }
 
-module.exports = { IMAGES_DIR, downloadAndSaveImage, cleanupOldImages };
+module.exports = { IMAGES_DIR, downloadAndSaveImage, fetchImageAsDataUri, cleanupOldImages };
