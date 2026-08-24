@@ -37,6 +37,10 @@ async function loginDahua() {
         }
 
         console.error('[Auth] Dahua login failed:', error.message);
+        if (error.response) {
+            console.error('[Auth] Response status:', error.response.status);
+            console.error('[Auth] Response body:', JSON.stringify(error.response.data));
+        }
         throw error;
     }
 }
