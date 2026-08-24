@@ -46,13 +46,13 @@ async function subscribeAlarm() {
     return res.data;
 }
 
-async function getAlarmFaceRecognitionInfo(alarmCode, deviceCode) {
+async function getAlarmFaceRecognitionInfo(alarmCode, deviceCode, alarmDate) {
     const res = await dahuaClient.post(
         `${config.dahuaBaseUrl}/eams/api/v1.0/BRM/Alarm/GetAlarmFaceRecognitionInfo`,
         {
             data: {
                 alarmCode,
-                alarmDate: Math.floor(Date.now() / 1000).toString(),
+                alarmDate: alarmDate || Math.floor(Date.now() / 1000).toString(),
                 deviceCode,
             },
         },

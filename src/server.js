@@ -1,8 +1,10 @@
+require('./logger');
 const express = require('express');
 const config = require('./config');
 const { loginDahua } = require('./auth');
 const { subscribeAlarm, getAlarmFaceRecognitionInfo } = require('./dahua');
 const { formatBlacklistMessage, sendToGoogleChat } = require('./gchat');
+const { parseAlarmXml } = require('./alarmParser');
 
 const app = express();
 app.use(express.text({ type: '*/*' }));
@@ -11,26 +13,27 @@ app.post('/api/dahua/push', async (req, res) => {
     // Dahua requires a fast response
     res.status(200).send('OK');
 
-    console.log('[Server] Received alarm from Dahua. Content-Type:', req.headers['content-type']);
-    console.log('[Server] Received alarm from Dahua. Raw body text:', req.body);
-
-    let alarmData;
+    let alarm;
     try {
-        alarmData = JSON.parse(req.body);
+        alarm = await parseAlarmXml(req.body);
     } catch (error) {
-        console.error('[Server] Failed to parse alarm body as JSON:', error.message);
+        console.error('[Server] Failed to parse alarm XML:', error.message);
         return;
     }
 
-    const { alarmCode, deviceCode } = alarmData;
-    if (!alarmCode) {
-        console.warn('[Server] No alarmCode found at root of payload — check parsed body above for actual field names/structure.', JSON.stringify(alarmData));
+    // callbackType: 1 = alarm raised, 2 = alarm cleared
+    if (alarm.callbackType !== '1') {
+        return;
+    }
+
+    if (!alarm.alarmCode) {
+        console.warn('[Server] No alarmCode found in parsed alarm:', JSON.stringify(alarm));
         return;
     }
 
     try {
-        const faceDetail = await getAlarmFaceRecognitionInfo(alarmCode, deviceCode);
-        const textMessage = formatBlacklistMessage(faceDetail, deviceCode);
+        const faceDetail = await getAlarmFaceRecognitionInfo(alarm.alarmCode, alarm.sourceCode, alarm.alarmTime);
+        const textMessage = formatBlacklistMessage(faceDetail, alarm);
         await sendToGoogleChat(textMessage);
     } catch (error) {
         console.error('[Server] Failed to process alarm or send to Google Chat:', error.message);

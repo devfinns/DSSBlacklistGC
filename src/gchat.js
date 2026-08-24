@@ -2,18 +2,22 @@ const axios = require('axios');
 const moment = require('moment');
 const config = require('./config');
 
-function formatBlacklistMessage(faceDetail, deviceCode) {
-    const dateStr = moment(faceDetail.alarmTime * 1000).format('YYYY-MM-DD');
-    const timeStr = moment(faceDetail.alarmTime * 1000).format('HH:mm:ss');
+function formatBlacklistMessage(faceDetail, alarm) {
+    const alarmTimeSeconds = faceDetail.alarmTime || alarm.alarmTime;
+    const momentValue = alarmTimeSeconds ? moment(Number(alarmTimeSeconds) * 1000) : moment();
+    const dateStr = momentValue.format('YYYY-MM-DD');
+    const timeStr = momentValue.format('HH:mm:ss');
+
+    const detectionImageUrl = faceDetail.detectionImageUrl || alarm.snapshotUrl;
 
     return `*Blacklist Detection Summary for ${dateStr}*
 
 Target Name: ${faceDetail.name || 'Unknown'}  |  Similarity: ${faceDetail.similarity || '0'}%
-Camera Location: ${faceDetail.deviceName || deviceCode}
+Camera Location: ${faceDetail.deviceName || alarm.sourceName || alarm.sourceCode}
 Detection Time: ${timeStr}
 
-Target Type: ${faceDetail.repositoryName || 'Blocklist Group'}
-Snapshot Image: ${faceDetail.detectionImageUrl ? `<${faceDetail.detectionImageUrl}|Click to View>` : 'No Image'}
+Target Type: ${faceDetail.repositoryName || alarm.alarmTypeName || 'Blocklist Group'}
+Snapshot Image: ${detectionImageUrl ? `<${detectionImageUrl}|Click to View>` : 'No Image'}
 Reference Image: ${faceDetail.repositoryImageUrl ? `<${faceDetail.repositoryImageUrl}|Click to View>` : 'No Image'}
 
 Action Required: Please dispatch security to the specified location immediately.
