@@ -5,17 +5,26 @@ const { subscribeAlarm, getAlarmFaceRecognitionInfo } = require('./dahua');
 const { formatBlacklistMessage, sendToGoogleChat } = require('./gchat');
 
 const app = express();
-app.use(express.json());
+app.use(express.text({ type: '*/*' }));
 
 app.post('/api/dahua/push', async (req, res) => {
     // Dahua requires a fast response
     res.status(200).send('OK');
 
-    const alarmData = req.body;
-    console.log('[Server] Received alarm from Dahua:', alarmData);
+    console.log('[Server] Received alarm from Dahua. Content-Type:', req.headers['content-type']);
+    console.log('[Server] Received alarm from Dahua. Raw body text:', req.body);
+
+    let alarmData;
+    try {
+        alarmData = JSON.parse(req.body);
+    } catch (error) {
+        console.error('[Server] Failed to parse alarm body as JSON:', error.message);
+        return;
+    }
 
     const { alarmCode, deviceCode } = alarmData;
     if (!alarmCode) {
+        console.warn('[Server] No alarmCode found at root of payload — check parsed body above for actual field names/structure.', JSON.stringify(alarmData));
         return;
     }
 
