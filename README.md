@@ -1,76 +1,76 @@
 # Dahua DSS to Google Chat Middleware
 
-Node.js middleware yang mengintegrasikan Dahua DSS V8.7 Face Recognition Blacklist dengan notifikasi Google Chat.
+Node.js middleware that integrates the Dahua DSS V8.7 Face Recognition Blacklist with Google Chat notifications.
 
-## Cara Kerja
+## How It Works
 
-1. Middleware login ke Dahua DSS via HTTP Digest authentication, dan menjaga token tetap aktif dengan keep-alive berkala serta refresh otomatis.
-2. Middleware subscribe ke alarm push Dahua DSS, memberikan URL callback middleware sendiri.
-3. Saat kamera mendeteksi wajah dalam blacklist group, Dahua DSS mengirim alarm (XML) ke endpoint callback middleware.
-4. Middleware mem-parsing alarm, mengambil detail pengenalan wajah dari API Dahua, memformat pesan, dan mengirimkannya ke Google Chat via Incoming Webhook.
+1. The middleware logs in to Dahua DSS using HTTP Digest authentication and keeps the token alive through periodic keep-alive calls and automatic refresh.
+2. It subscribes to Dahua DSS alarm push notifications, providing its own callback URL.
+3. When a camera detects a face on the blacklist, Dahua DSS sends an alarm (XML) to the middleware's callback endpoint.
+4. The middleware parses the alarm, retrieves face recognition details from the Dahua API, formats a message, and sends it to Google Chat through an Incoming Webhook.
 
-## Struktur Proyek
+## Project Structure
 
 ```
 src/
-  config.js        # Load & validasi environment variables
-  auth.js          # Login digest Dahua, keep-alive, dan auto-refresh token
-  dahuaClient.js    # Axios instance khusus Dahua (skip verifikasi SSL self-signed)
-  dahua.js         # Panggilan API Dahua: subscribe alarm, get face recognition info, add person
-  alarmParser.js   # Parsing payload alarm XML dari Dahua
-  gchat.js         # Format pesan & kirim ke Google Chat webhook
-  logger.js        # Menambahkan timestamp (GMT+8) ke semua console log
-  server.js        # Express server, endpoint callback, orkestrasi startup
+  config.js        Loads and validates environment variables
+  auth.js          Dahua digest login, keep-alive, and automatic token refresh
+  dahuaClient.js   Axios instance dedicated to Dahua (skips self-signed SSL verification)
+  dahua.js         Dahua API calls: subscribe to alarms, get face recognition info, add person
+  alarmParser.js   Parses the XML alarm payload sent by Dahua
+  gchat.js         Formats messages and sends them to the Google Chat webhook
+  logger.js        Adds a GMT+8 timestamp to every console log
+  server.js        Express server, callback endpoint, and startup orchestration
 ```
 
-## Instalasi
+## Setup
 
 ```bash
 npm install
 cp .env.example .env
 ```
 
-Isi `.env` dengan nilai sesuai lingkungan Anda:
+Fill in `.env` with values for your environment:
 
-| Variable | Keterangan |
+| Variable | Description |
 |---|---|
-| `DAHUA_BASE_URL` | URL dasar Dahua DSS, contoh `https://10.62.21.254:443` |
-| `DAHUA_USERNAME` | Username login Dahua DSS |
-| `DAHUA_PASSWORD` | Password login Dahua DSS |
-| `GOOGLE_CHAT_WEBHOOK_URL` | Incoming Webhook URL dari space Google Chat tujuan |
-| `MIDDLEWARE_PORT` | Port middleware berjalan (default `3000`) |
-| `MIDDLEWARE_WEBHOOK_URL` | URL callback middleware yang bisa diakses balik oleh Dahua DSS |
-| `DAHUA_SUBSCRIBE_SIGNATURE` | String bebas untuk validasi signature saat subscribe alarm |
+| `DAHUA_BASE_URL` | Dahua DSS base URL, e.g. `https://10.62.21.254:443` |
+| `DAHUA_USERNAME` | Dahua DSS login username |
+| `DAHUA_PASSWORD` | Dahua DSS login password |
+| `GOOGLE_CHAT_WEBHOOK_URL` | Incoming Webhook URL for the target Google Chat space |
+| `MIDDLEWARE_PORT` | Port the middleware listens on (default `3000`) |
+| `MIDDLEWARE_WEBHOOK_URL` | Callback URL that Dahua DSS can reach back to |
+| `DAHUA_SUBSCRIBE_SIGNATURE` | Arbitrary string used to validate the alarm subscription signature |
 
-## Menjalankan
+## Running
 
 ```bash
 npm start
 ```
 
-Untuk auto-restart saat development:
+For auto-restart during development:
 
 ```bash
 npm run dev
 ```
 
-Untuk produksi, jalankan sebagai service dengan PM2:
+For production, run it as a service with PM2:
 
 ```bash
 pm2 start src/server.js --name dahua-blacklist-gchat
 pm2 save
 ```
 
-Endpoint kesehatan tersedia di `GET /health`.
+A health check endpoint is available at `GET /health`.
 
-## Catatan Jaringan
+## Network Notes
 
-- Dahua DSS harus bisa diakses dari server middleware (arah keluar).
-- Dahua DSS harus bisa mengakses balik `MIDDLEWARE_WEBHOOK_URL` (arah masuk) — pastikan firewall (ufw/security group) mengizinkan port middleware dari subnet Dahua DSS.
-- Jika Dahua DSS menggunakan sertifikat self-signed, `dahuaClient.js` sudah dikonfigurasi untuk menerima itu (`rejectUnauthorized: false`) khusus untuk koneksi ke Dahua — koneksi ke Google Chat tetap diverifikasi normal.
+- The middleware server must be able to reach Dahua DSS (outbound).
+- Dahua DSS must be able to reach `MIDDLEWARE_WEBHOOK_URL` back (inbound) — make sure the firewall (ufw / security group) allows the middleware port from the Dahua DSS subnet.
+- If Dahua DSS uses a self-signed certificate, `dahuaClient.js` is already configured to accept it (`rejectUnauthorized: false`) for Dahua connections only — the connection to Google Chat is still verified normally.
 
-## Diagnostik Umum
+## Common Issues
 
-- **Error `code: 7000, "Auth failed"`** — token Dahua expired. Pastikan `auth.js` menjalankan keep-alive dan auto-refresh token (sudah diimplementasikan).
-- **Gambar di Google Chat tidak bisa dibuka** — URL gambar dari Dahua DSS memerlukan parameter `?token={credential}`, yang otomatis ditambahkan oleh `gchat.js`.
-- **Alarm tidak sampai ke middleware** — periksa firewall di server middleware, dan pastikan `subscribeAlarm()` berhasil dijalankan saat startup (lihat log `Successfully subscribed to alarm notifications`).
+- **`code: 7000, "Auth failed"`** — the Dahua token expired. Confirm `auth.js` is running its keep-alive and token refresh timers (already implemented).
+- **Images in Google Chat won't open** — Dahua image URLs require a `?token={credential}` parameter, which `gchat.js` appends automatically.
+- **Alarms never reach the middleware** — check the firewall on the middleware server, and confirm `subscribeAlarm()` succeeded at startup (look for the `Successfully subscribed to alarm notifications` log line).
