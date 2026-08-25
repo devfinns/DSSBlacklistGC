@@ -5,11 +5,10 @@ const { loginDahua } = require('./auth');
 const { subscribeAlarm, getAlarmFaceRecognitionInfo } = require('./dahua');
 const { formatBlacklistMessage, sendToGoogleChat } = require('./gchat');
 const { parseAlarmXml } = require('./alarmParser');
-const { IMAGES_DIR, fetchImageAsDataUri, cleanupOldImages } = require('./imageStore');
+const { fetchImageAsDataUri } = require('./dahuaImageFetcher');
 
 const app = express();
 app.use(express.text({ type: '*/*' }));
-app.use('/images', express.static(IMAGES_DIR));
 
 app.post('/api/dahua/push', async (req, res) => {
     // Dahua requires a fast response
@@ -65,10 +64,4 @@ app.listen(config.middlewarePort, async () => {
     } catch (error) {
         console.error('[Server] Dahua initialization failed:', error.message);
     }
-
-    // Run once at startup, then every 24 hours. cleanupOldImages() only removes
-    // files older than config.imageMaxAgeDays, so daily checks are enough to
-    // achieve the monthly cleanup cadence.
-    cleanupOldImages();
-    setInterval(cleanupOldImages, 24 * 60 * 60 * 1000);
 });

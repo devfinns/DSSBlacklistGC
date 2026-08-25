@@ -22,8 +22,4 @@ module.exports = {
     middlewarePort: process.env.MIDDLEWARE_PORT || 3000,
     middlewareWebhookUrl: process.env.MIDDLEWARE_WEBHOOK_URL,
     dahuaSubscribeSignature: process.env.DAHUA_SUBSCRIBE_SIGNATURE || 'random_string_123',
-    // Public-facing base URL used to build image links (e.g. https://your-domain.com).
-    // Until public access is set up, images are saved locally but links will not be reachable from Google Chat.
-    publicBaseUrl: process.env.PUBLIC_BASE_URL || process.env.MIDDLEWARE_WEBHOOK_URL.replace(/\/api\/dahua\/push$/, ''),
-    imageMaxAgeHours: Number(process.env.IMAGE_MAX_AGE_HOURS) || 1,
 };

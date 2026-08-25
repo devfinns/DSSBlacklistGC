@@ -1,5 +1,5 @@
 const config = require('./config');
-const { getToken } = require('./auth');
+const { getToken, withAuthRetry } = require('./auth');
 const dahuaClient = require('./dahuaClient');
 
 async function addPersonToBlacklist(personId, firstName, base64Image) {
@@ -25,9 +25,11 @@ async function addPersonToBlacklist(personId, firstName, base64Image) {
         },
     };
 
-    const res = await dahuaClient.post(`${config.dahuaBaseUrl}/obms/api/v1.1/acs/person`, payload, {
-        headers: { 'X-Subject-Token': getToken() },
-    });
+    const res = await withAuthRetry(() =>
+        dahuaClient.post(`${config.dahuaBaseUrl}/obms/api/v1.1/acs/person`, payload, {
+            headers: { 'X-Subject-Token': getToken() },
+        })
+    );
     console.log('[Dahua] Successfully added person to Blacklist:', res.data);
     return res.data;
 }
@@ -39,26 +41,30 @@ async function subscribeAlarm() {
         signature: config.dahuaSubscribeSignature,
     };
 
-    const res = await dahuaClient.post(`${config.dahuaBaseUrl}/brms/api/v1.1/push-data/alarm/subscribe`, payload, {
-        headers: { 'X-Subject-Token': getToken() },
-    });
+    const res = await withAuthRetry(() =>
+        dahuaClient.post(`${config.dahuaBaseUrl}/brms/api/v1.1/push-data/alarm/subscribe`, payload, {
+            headers: { 'X-Subject-Token': getToken() },
+        })
+    );
     console.log('[Dahua] Successfully subscribed to alarm notifications:', res.data);
     return res.data;
 }
 
 async function getAlarmFaceRecognitionInfo(alarmCode, deviceCode, alarmDate) {
-    const res = await dahuaClient.post(
-        `${config.dahuaBaseUrl}/eams/api/v1.0/BRM/Alarm/GetAlarmFaceRecognitionInfo`,
-        {
-            data: {
-                alarmCode,
-                alarmDate: alarmDate || Math.floor(Date.now() / 1000).toString(),
-                deviceCode,
+    const res = await withAuthRetry(() =>
+        dahuaClient.post(
+            `${config.dahuaBaseUrl}/eams/api/v1.0/BRM/Alarm/GetAlarmFaceRecognitionInfo`,
+            {
+                data: {
+                    alarmCode,
+                    alarmDate: alarmDate || Math.floor(Date.now() / 1000).toString(),
+                    deviceCode,
+                },
             },
-        },
-        {
-            headers: { 'X-Subject-Token': getToken() },
-        }
+            {
+                headers: { 'X-Subject-Token': getToken() },
+            }
+        )
     );
     console.log('[Dahua] GetAlarmFaceRecognitionInfo response:', JSON.stringify(res.data));
     return res.data.data || {};
