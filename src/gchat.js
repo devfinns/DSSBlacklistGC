@@ -2,20 +2,20 @@ const axios = require('axios');
 const moment = require('moment');
 const config = require('./config');
 
-// Header badge color by similarity tier: 90%+ = pink/red, 80-89% = light yellow, anything else = gray.
-// Rendered as a solid-color circle SVG encoded as a data URI (no external hosting needed).
-function getSimilarityBadgeIcon(similarity) {
+// Status line shown at the top of the card body: HIGH (red, >=90%), MEDIUM
+// (yellow, 80-89%), or nothing at all below 80%. Header title/subtitle can't
+// be colored in cardsV2, so this textParagraph (which supports <font color>)
+// is the most prominent place that can actually render a color.
+function getSimilarityStatusLine(similarity) {
     const value = Number(similarity);
 
-    let color = '#9E9E9E';
     if (Number.isFinite(value) && value >= 90) {
-        color = '#FF69B4';
-    } else if (Number.isFinite(value) && value >= 80) {
-        color = '#FFF59D';
+        return '<font color="#E53935"><b>HIGH</b></font>';
     }
-
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="${color}"/></svg>`;
-    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+    if (Number.isFinite(value) && value >= 80) {
+        return '<font color="#F9A825"><b>MEDIUM</b></font>';
+    }
+    return null;
 }
 
 // "View Details" button color by similarity tier: <80% = black, 80-89% = yellow, 90%+ = red.
@@ -51,9 +51,15 @@ function formatBlacklistMessage(faceDetail, alarm, imageUrls) {
     const detectionImageUrl = imageUrls.detectionImageUrl;
     const repositoryImageUrl = imageUrls.repositoryImageUrl;
     const targetName = (faceDetail.name || '').replace(/null$/i, '').trim() || 'Unknown';
-    const similarityBadgeIcon = getSimilarityBadgeIcon(faceDetail.similarity || '0');
+    const statusLine = getSimilarityStatusLine(faceDetail.similarity || '0');
 
-    const widgets = [
+    const widgets = [];
+
+    if (statusLine) {
+        widgets.push({ textParagraph: { text: statusLine } });
+    }
+
+    widgets.push(
         {
             decoratedText: {
                 topLabel: 'Target Name',
@@ -77,8 +83,8 @@ function formatBlacklistMessage(faceDetail, alarm, imageUrls) {
                 topLabel: 'Target Type',
                 text: faceDetail.repositoryName || alarm.alarmTypeName || 'Blocklist Group',
             },
-        },
-    ];
+        }
+    );
 
     if (detectionImageUrl) {
         widgets.push({ textParagraph: { text: '<b>Snapshot Image</b>' } });
@@ -119,8 +125,6 @@ function formatBlacklistMessage(faceDetail, alarm, imageUrls) {
                     header: {
                         title: 'Blacklist Detection Summary',
                         subtitle: dateStr,
-                        imageUrl: similarityBadgeIcon,
-                        imageType: 'CIRCLE',
                     },
                     sections: [{ widgets }],
                 },
