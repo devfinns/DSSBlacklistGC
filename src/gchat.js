@@ -18,6 +18,30 @@ function getSimilarityBadgeIcon(similarity) {
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
+// "View Details" button color by similarity tier: <80% = black, 80-89% = yellow, 90%+ = red.
+// Google Chat buttonList expects RGB as 0-1 floats, not hex.
+function hexToRgbFloat(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    return { red: r, green: g, blue: b, alpha: 1 };
+}
+
+function getViewDetailsButtonColor(similarity) {
+    const value = Number(similarity);
+
+    let hex = '#000000';
+    if (Number.isFinite(value) && value >= 90) {
+        hex = '#E53935';
+    } else if (Number.isFinite(value) && value >= 80) {
+        hex = '#FDD835';
+    } else {
+        hex = '#000000';
+    }
+
+    return hexToRgbFloat(hex);
+}
+
 function formatBlacklistMessage(faceDetail, alarm, imageUrls) {
     const alarmTimeSeconds = faceDetail.alarmTime || alarm.alarmTime;
     const momentValue = alarmTimeSeconds ? moment(Number(alarmTimeSeconds) * 1000) : moment();
@@ -64,6 +88,21 @@ function formatBlacklistMessage(faceDetail, alarm, imageUrls) {
     if (repositoryImageUrl) {
         widgets.push({ textParagraph: { text: '<b>Reference Image</b>' } });
         widgets.push({ image: { imageUrl: repositoryImageUrl } });
+    }
+
+    const viewDetailsUrl = detectionImageUrl || repositoryImageUrl;
+    if (viewDetailsUrl) {
+        widgets.push({
+            buttonList: {
+                buttons: [
+                    {
+                        text: 'View Details',
+                        color: getViewDetailsButtonColor(faceDetail.similarity || '0'),
+                        onClick: { openLink: { url: viewDetailsUrl } },
+                    },
+                ],
+            },
+        });
     }
 
     widgets.push({
