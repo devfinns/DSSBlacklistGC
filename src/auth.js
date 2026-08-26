@@ -92,8 +92,10 @@ function scheduleTokenUpdate(tokenRateSeconds) {
             dahuaToken = newToken;
             if (res.data.data.credential) {
                 dahuaCredential = res.data.data.credential;
+                console.log('[Auth] Dahua token and credential updated successfully.');
+            } else {
+                console.log('[Auth] Dahua token updated successfully (no credential in response).');
             }
-            console.log('[Auth] Dahua token updated successfully.');
         } catch (error) {
             console.error('[Auth] Token update failed, falling back to full re-login:', error.message);
             try {
