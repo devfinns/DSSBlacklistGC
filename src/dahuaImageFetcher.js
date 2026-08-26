@@ -1,49 +1,16 @@
-const dahuaClient = require('./dahuaClient');
-const { getCredential, loginDahua } = require('./auth');
+const { getCredential } = require('./auth');
 
-function withCredential(url) {
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}token=${getCredential()}`;
-}
-
-// Dahua returns image URL failures as a small JSON body (e.g. {"code":7000,...})
-// instead of an HTTP error, even though the response type is arraybuffer.
-function isAuthFailureBuffer(buffer) {
-    if (!buffer || buffer.length > 500) {
-        return false;
-    }
-    try {
-        const parsed = JSON.parse(buffer.toString('utf8'));
-        return parsed && parsed.code === 7000;
-    } catch {
-        return false;
-    }
-}
-
-async function fetchImageBuffer(dahuaImageUrl) {
-    let response = await dahuaClient.get(withCredential(dahuaImageUrl), { responseType: 'arraybuffer' });
-
-    if (isAuthFailureBuffer(response.data)) {
-        console.warn('[DahuaImageFetcher] Image fetch failed with code 7000 (Auth failed). Re-logging in and retrying once.');
-        await loginDahua();
-        response = await dahuaClient.get(withCredential(dahuaImageUrl), { responseType: 'arraybuffer' });
-    }
-
-    return response;
-}
-
-// Fetches the image and returns it as a base64 data URI, embedded directly in
-// the Google Chat card payload. No local storage or public hosting required.
-async function fetchImageAsDataUri(dahuaImageUrl) {
+// Google Chat's imageUrl field only accepts an HTTPS URL it can fetch itself
+// (confirmed via official docs: no support for data: URIs, and a 32KB total
+// message size limit that base64-encoded images blow past anyway). So we
+// return a direct link to the Dahua image with the session credential
+// appended, instead of embedding the image data.
+function withImageCredential(dahuaImageUrl) {
     if (!dahuaImageUrl) {
         return null;
     }
-
-    const response = await fetchImageBuffer(dahuaImageUrl);
-    const base64 = Buffer.from(response.data).toString('base64');
-    const contentType = response.headers['content-type'] || 'image/jpeg';
-
-    return `data:${contentType};base64,${base64}`;
+    const separator = dahuaImageUrl.includes('?') ? '&' : '?';
+    return `${dahuaImageUrl}${separator}token=${getCredential()}`;
 }
 
-module.exports = { fetchImageAsDataUri };
+module.exports = { withImageCredential };

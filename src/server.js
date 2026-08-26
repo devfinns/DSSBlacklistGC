@@ -5,7 +5,7 @@ const { loginDahua } = require('./auth');
 const { subscribeAlarm, getAlarmFaceRecognitionInfo } = require('./dahua');
 const { formatBlacklistMessage, sendToGoogleChat } = require('./gchat');
 const { parseAlarmXml } = require('./alarmParser');
-const { fetchImageAsDataUri } = require('./dahuaImageFetcher');
+const { withImageCredential } = require('./dahuaImageFetcher');
 
 const app = express();
 app.use(express.text({ type: '*/*' }));
@@ -35,16 +35,8 @@ app.post('/api/dahua/push', async (req, res) => {
     try {
         const faceDetail = await getAlarmFaceRecognitionInfo(alarm.alarmCode, alarm.sourceCode, alarm.alarmTime);
 
-        const [detectionImageUrl, repositoryImageUrl] = await Promise.all([
-            fetchImageAsDataUri(faceDetail.detectionImageUrl || alarm.snapshotUrl).catch((error) => {
-                console.error('[Server] Failed to fetch detection image as data URI:', error.message);
-                return null;
-            }),
-            fetchImageAsDataUri(faceDetail.repositoryImageUrl).catch((error) => {
-                console.error('[Server] Failed to fetch repository image as data URI:', error.message);
-                return null;
-            }),
-        ]);
+        const detectionImageUrl = withImageCredential(faceDetail.detectionImageUrl || alarm.snapshotUrl);
+        const repositoryImageUrl = withImageCredential(faceDetail.repositoryImageUrl);
 
         const textMessage = formatBlacklistMessage(faceDetail, alarm, { detectionImageUrl, repositoryImageUrl });
         await sendToGoogleChat(textMessage);
