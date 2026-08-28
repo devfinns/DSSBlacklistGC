@@ -35,6 +35,17 @@ app.post('/api/dahua/push', async (req, res) => {
     try {
         const faceDetail = await getAlarmFaceRecognitionInfo(alarm.alarmCode, alarm.sourceCode, alarm.alarmTime);
 
+        // The credential used for image URLs is only refreshed by a full
+        // re-login or the ~20-minute token-update cycle (Dahua's keep-alive
+        // response never carries a new credential), so it can go stale between
+        // cycles. Re-login right before building image URLs to guarantee a
+        // fresh credential for every alarm.
+        try {
+            await loginDahua();
+        } catch (loginError) {
+            console.error('[Server] Pre-image re-login failed, using existing credential:', loginError.message);
+        }
+
         const detectionImageUrl = withImageCredential(faceDetail.detectionImageUrl || alarm.snapshotUrl);
         const repositoryImageUrl = withImageCredential(faceDetail.repositoryImageUrl);
 
