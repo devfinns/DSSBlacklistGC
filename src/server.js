@@ -5,7 +5,7 @@ const { loginDahua } = require('./auth');
 const { subscribeAlarm, getAlarmFaceRecognitionInfo } = require('./dahua');
 const { formatBlacklistMessage, sendToGoogleChat } = require('./gchat');
 const { parseAlarmXml } = require('./alarmParser');
-const { withImageCredential } = require('./dahuaImageFetcher');
+const { fetchImageAsDataUri } = require('./dahuaImageFetcher');
 
 const app = express();
 app.use(express.text({ type: '*/*' }));
@@ -38,7 +38,7 @@ app.post('/api/dahua/push', async (req, res) => {
         // The credential used for image URLs is only refreshed by a full
         // re-login or the ~20-minute token-update cycle (Dahua's keep-alive
         // response never carries a new credential), so it can go stale between
-        // cycles. Re-login right before building image URLs to guarantee a
+        // cycles. Re-login right before fetching images to guarantee a
         // fresh credential for every alarm.
         try {
             await loginDahua();
@@ -46,8 +46,16 @@ app.post('/api/dahua/push', async (req, res) => {
             console.error('[Server] Pre-image re-login failed, using existing credential:', loginError.message);
         }
 
-        const detectionImageUrl = withImageCredential(faceDetail.detectionImageUrl || alarm.snapshotUrl);
-        const repositoryImageUrl = withImageCredential(faceDetail.repositoryImageUrl);
+        const [detectionImageUrl, repositoryImageUrl] = await Promise.all([
+            fetchImageAsDataUri(faceDetail.detectionImageUrl || alarm.snapshotUrl).catch((error) => {
+                console.error('[Server] Failed to fetch detection image:', error.message);
+                return null;
+            }),
+            fetchImageAsDataUri(faceDetail.repositoryImageUrl).catch((error) => {
+                console.error('[Server] Failed to fetch repository image:', error.message);
+                return null;
+            }),
+        ]);
 
         const textMessage = formatBlacklistMessage(faceDetail, alarm, { detectionImageUrl, repositoryImageUrl });
         await sendToGoogleChat(textMessage);
