@@ -1,27 +1,11 @@
 # Dahua DSS to Google Chat Middleware
 
-Node.js middleware that integrates the Dahua DSS V8.7 Face Recognition Blacklist with Google Chat notifications.
+**Version:** 1.0.0
+**Author:** Farid Hartono Gunawan (farid.gunawan@finnsbeachclub.com)
 
-## How It Works
+Node.js middleware that forwards Dahua DSS V8.7 face recognition blacklist alarms to a Google Chat space, with the detected face, similarity score, and camera details.
 
-1. The middleware logs in to Dahua DSS using HTTP Digest authentication and keeps the token alive through periodic keep-alive calls and automatic refresh.
-2. It subscribes to Dahua DSS alarm push notifications, providing its own callback URL.
-3. When a camera detects a face on the blacklist, Dahua DSS sends an alarm (XML) to the middleware's callback endpoint.
-4. The middleware parses the alarm, retrieves face recognition details from the Dahua API, formats a message, and sends it to Google Chat through an Incoming Webhook.
-
-## Project Structure
-
-```
-src/
-  config.js        Loads and validates environment variables
-  auth.js          Dahua digest login, keep-alive, and automatic token refresh
-  dahuaClient.js   Axios instance dedicated to Dahua (skips self-signed SSL verification)
-  dahua.js         Dahua API calls: subscribe to alarms, get face recognition info, add person
-  alarmParser.js   Parses the XML alarm payload sent by Dahua
-  gchat.js         Formats messages and sends them to the Google Chat webhook
-  logger.js        Adds a GMT+8 timestamp to every console log
-  server.js        Express server, callback endpoint, and startup orchestration
-```
+For end-user operation, see [userman.md](userman.md). For architecture and implementation detail, see [docs.md](docs.md).
 
 ## Setup
 
@@ -30,47 +14,54 @@ npm install
 cp .env.example .env
 ```
 
-Fill in `.env` with values for your environment:
+Fill in `.env`:
 
-| Variable | Description |
-|---|---|
-| `DAHUA_BASE_URL` | Dahua DSS base URL, e.g. `https://10.62.21.254:443` |
-| `DAHUA_USERNAME` | Dahua DSS login username |
-| `DAHUA_PASSWORD` | Dahua DSS login password |
-| `GOOGLE_CHAT_WEBHOOK_URL` | Incoming Webhook URL for the target Google Chat space |
-| `MIDDLEWARE_PORT` | Port the middleware listens on (default `3000`) |
-| `MIDDLEWARE_WEBHOOK_URL` | Callback URL that Dahua DSS can reach back to |
-| `DAHUA_SUBSCRIBE_SIGNATURE` | Arbitrary string used to validate the alarm subscription signature |
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `DAHUA_BASE_URL` | Yes | — | Dahua DSS base URL, e.g. `https://10.62.21.254:443` |
+| `DAHUA_USERNAME` | Yes | — | Dahua DSS login username |
+| `DAHUA_PASSWORD` | Yes | — | Dahua DSS login password |
+| `GOOGLE_CHAT_WEBHOOK_URL` | Yes | — | Incoming Webhook URL for the target Google Chat space |
+| `MIDDLEWARE_WEBHOOK_URL` | Yes | — | Callback URL that Dahua DSS pushes alarms to |
+| `MIDDLEWARE_PORT` | No | `3000` | Port the server listens on |
+| `DAHUA_SUBSCRIBE_SIGNATURE` | No | `random_string_123` | Arbitrary string used when subscribing to Dahua alarms |
 
 ## Running
 
 ```bash
-npm start
+npm start        # production
+npm run dev       # auto-restart on file change
 ```
 
-For auto-restart during development:
+For production, run as a managed service:
 
 ```bash
-npm run dev
-```
-
-For production, run it as a service with PM2:
-
-```bash
-pm2 start src/server.js --name dahua-blacklist-gchat
+pm2 start src/server.js --name dss-blacklist-gchat
 pm2 save
 ```
 
-A health check endpoint is available at `GET /health`.
+Health check: `GET /health` → `{"status":"ok"}`
 
-## Network Notes
+## Project Structure
 
-- The middleware server must be able to reach Dahua DSS (outbound).
-- Dahua DSS must be able to reach `MIDDLEWARE_WEBHOOK_URL` back (inbound) — make sure the firewall (ufw / security group) allows the middleware port from the Dahua DSS subnet.
-- If Dahua DSS uses a self-signed certificate, `dahuaClient.js` is already configured to accept it (`rejectUnauthorized: false`) for Dahua connections only — the connection to Google Chat is still verified normally.
+```
+src/
+  config.js               Loads and validates environment variables
+  auth.js                 Dahua digest login, keep-alive, token/credential refresh
+  dahuaClient.js           Axios instance for Dahua (accepts self-signed TLS)
+  dahua.js                Dahua REST calls: subscribe alarms, face recognition detail, add person
+  dahuaImageFetcher.js     Fetches Dahua images and encodes them as base64 data URIs
+  alarmParser.js           Parses the XML alarm payload from Dahua
+  gchat.js                 Builds and sends the Google Chat card
+  logger.js                Adds a GMT+8 timestamp to console output
+  server.js                Express app, callback endpoint, startup orchestration
+```
 
-## Common Issues
+## Network Requirements
 
-- **`code: 7000, "Auth failed"`** — the Dahua token expired. Confirm `auth.js` is running its keep-alive and token refresh timers (already implemented).
-- **Images in Google Chat won't open** — Dahua image URLs require a `?token={credential}` parameter, which `gchat.js` appends automatically.
-- **Alarms never reach the middleware** — check the firewall on the middleware server, and confirm `subscribeAlarm()` succeeded at startup (look for the `Successfully subscribed to alarm notifications` log line).
+- Outbound access from the middleware server to Dahua DSS.
+- Inbound access from Dahua DSS to `MIDDLEWARE_WEBHOOK_URL` (for alarm delivery only — images are embedded in messages, not linked, so no public image hosting is required).
+
+## Known Limitations
+
+- Google Chat rejects messages over 32 KB. Snapshot/reference images are embedded as base64 without compression, so a large original photo can occasionally cause a message to fail. See [docs.md](docs.md#6-face-detail-and-image-retrieval) for detail.
