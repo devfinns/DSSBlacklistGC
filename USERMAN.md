@@ -1,4 +1,4 @@
-# User Manual — Dahua DSS to Google Chat Middleware
+# User Manual — FINNS CCTV Blacklist Notification
 
 **Version:** 1.0.0
 **Author:** Farid Hartono Gunawan (farid.gunawan@finnsbeachclub.com)
@@ -7,7 +7,17 @@
 
 This application forwards Dahua DSS V8.7 face recognition blacklist alerts to a Google Chat space in real time. When a camera detects a face matching the blacklist, a notification card is posted automatically, including the detected face, similarity score, camera location, and detection time.
 
-## 2. What You Will See in Google Chat
+## 2. When and How the Notification Is Triggered
+
+1. A CCTV camera connected to Dahua DSS performs live face recognition against the configured blacklist group.
+2. When a face match is found, Dahua DSS raises an alarm and immediately pushes it (as an XML payload) to the application's webhook endpoint (`MIDDLEWARE_WEBHOOK_URL`), which the application registered with Dahua DSS at startup.
+3. The application reads the alarm code from the payload and calls back to Dahua DSS to retrieve full detection detail — matched person, similarity score, camera, and the snapshot/reference images.
+4. The application formats this detail into a card and posts it to the configured Google Chat space via an Incoming Webhook.
+5. The entire sequence, from camera detection to the message appearing in Google Chat, typically completes within one to two seconds under normal network conditions.
+
+The trigger is fully automatic — no manual action is required to raise a notification, and only alarms of type "alarm raised" (not "alarm cleared") produce a message.
+
+## 3. What You Will See in Google Chat
 
 Each detection appears as a card in the configured Google Chat space:
 
@@ -22,13 +32,13 @@ Each detection appears as a card in the configured Google Chat space:
 - **Snapshot Image** — the face captured by the camera at detection time
 - **Reference Image** — the face on file in the blacklist group
 
-## 3. Operating Notes
+## 4. Operating Notes
 
 - **Image size limit.** Google Chat rejects messages larger than 32 KB. Snapshot and reference images are embedded directly in the message; if the original photo from Dahua is large, the message may occasionally fail to send. This is a platform limit, not an application error.
 - **No action buttons.** Images render directly in the card; there is no separate link to click.
 - **Duplicate detections.** The same person may trigger multiple alerts in quick succession if detected by the camera more than once.
 
-## 4. Starting and Stopping the Application
+## 5. Starting and Stopping the Application
 
 The application runs as a background service managed by PM2 on the middleware server.
 
@@ -53,7 +63,7 @@ curl http://localhost:<MIDDLEWARE_PORT>/health
 ```
 Expected response: `{"status":"ok"}`
 
-## 5. Common Issues
+## 6. Common Issues
 
 | Symptom | Likely Cause | Action |
 |---|---|---|
@@ -62,7 +72,7 @@ Expected response: `{"status":"ok"}`
 | Logs show repeated `Auth failed` (code 7000) | Dahua session token expired | The application re-authenticates automatically; if the issue persists, restart the service |
 | Target name ends with an unexpected `null` | Missing last name in the Dahua person record | Cosmetic only; the application strips a trailing `null` automatically |
 
-## 6. Escalation
+## 7. Escalation
 
 For issues not covered above, collect the following before contacting support:
 - Output of `pm2 logs dss-blacklist-gchat --lines 100 --nostream`

@@ -1,7 +1,7 @@
 {
-  "name": "dahua-gchat-middleware",
+  "name": "finns-cctv-blacklist-notification",
   "version": "1.0.0",
-  "description": "Middleware Node.js untuk integrasi Dahua DSS V8.7 Face Recognition Blacklist dengan notifikasi Google Chat",
+  "description": "FINNS CCTV Blacklist Notification - Node.js middleware forwarding Dahua DSS V8.7 face recognition blacklist alarms to Google Chat",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

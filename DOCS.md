@@ -1,4 +1,4 @@
-# Technical Documentation — Dahua DSS to Google Chat Middleware
+# Technical Documentation — FINNS CCTV Blacklist Notification
 
 **Version:** 1.0.0
 **Author:** Farid Hartono Gunawan (farid.gunawan@finnsbeachclub.com)

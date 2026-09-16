@@ -1,11 +1,11 @@
-# Dahua DSS to Google Chat Middleware
+# FINNS CCTV Blacklist Notification
 
 **Version:** 1.0.0
 **Author:** Farid Hartono Gunawan (farid.gunawan@finnsbeachclub.com)
 
 Node.js middleware that forwards Dahua DSS V8.7 face recognition blacklist alarms to a Google Chat space, with the detected face, similarity score, and camera details.
 
-For end-user operation, see [userman.md](userman.md). For architecture and implementation detail, see [docs.md](docs.md).
+For end-user operation, see [USERMAN.md](USERMAN.md). For architecture and implementation detail, see [DOCS.md](DOCS.md).
 
 ## Setup
 
@@ -64,4 +64,4 @@ src/
 
 ## Known Limitations
 
-- Google Chat rejects messages over 32 KB. Snapshot/reference images are embedded as base64 without compression, so a large original photo can occasionally cause a message to fail. See [docs.md](docs.md#6-face-detail-and-image-retrieval) for detail.
+- Google Chat rejects messages over 32 KB. Snapshot/reference images are embedded as base64 without compression, so a large original photo can occasionally cause a message to fail. See [DOCS.md](DOCS.md#6-face-detail-and-image-retrieval) for detail.
