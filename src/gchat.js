@@ -72,6 +72,10 @@ function formatBlacklistMessage(faceDetail, alarm, imageUrls) {
         widgets.push({ image: { imageUrl: repositoryImageUrl } });
     }
 
+    if (imageUrls.omitted) {
+        widgets.push({ textParagraph: { text: '<i>Images omitted: the message exceeded the Google Chat size limit.</i>' } });
+    }
+
     widgets.push({
         textParagraph: {
             text: 'Action Required: Please dispatch security to the specified location immediately.\n\nStay safe!',
@@ -109,4 +113,22 @@ async function sendToGoogleChat(cardPayload) {
     }
 }
 
-module.exports = { formatBlacklistMessage, sendToGoogleChat };
+// Sends the alert. Google Chat rejects messages over ~32 KB with a 400, which is
+// most likely caused by the embedded images, so on a 400 the alert is resent once
+// without images rather than being lost.
+async function sendBlacklistAlert(faceDetail, alarm, imageUrls) {
+    try {
+        await sendToGoogleChat(formatBlacklistMessage(faceDetail, alarm, imageUrls));
+    } catch (error) {
+        const hasImages = imageUrls.detectionImageUrl || imageUrls.repositoryImageUrl;
+        if (!(error.response && error.response.status === 400 && hasImages)) {
+            throw error;
+        }
+        console.warn('[GChat] Message with images was rejected (400). Resending without images.');
+        await sendToGoogleChat(
+            formatBlacklistMessage(faceDetail, alarm, { detectionImageUrl: null, repositoryImageUrl: null, omitted: true })
+        );
+    }
+}
+
+module.exports = { formatBlacklistMessage, sendToGoogleChat, sendBlacklistAlert };

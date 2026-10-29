@@ -46,6 +46,9 @@ async function subscribeAlarm() {
             headers: { 'X-Subject-Token': getToken() },
         })
     );
+    if (!res.data || res.data.code !== 1000) {
+        throw new Error(`Alarm subscription rejected: ${JSON.stringify(res.data)}`);
+    }
     console.log('[Dahua] Successfully subscribed to alarm notifications:', res.data);
     return res.data;
 }

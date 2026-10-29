@@ -3,7 +3,7 @@ const express = require('express');
 const config = require('./config');
 const { loginDahua } = require('./auth');
 const { subscribeAlarm, getAlarmFaceRecognitionInfo } = require('./dahua');
-const { formatBlacklistMessage, sendToGoogleChat } = require('./gchat');
+const { sendBlacklistAlert } = require('./gchat');
 const { parseAlarmXml } = require('./alarmParser');
 const { fetchImageAsDataUri } = require('./dahuaImageFetcher');
 
@@ -57,22 +57,34 @@ app.post('/api/dahua/push', async (req, res) => {
             }),
         ]);
 
-        const textMessage = formatBlacklistMessage(faceDetail, alarm, { detectionImageUrl, repositoryImageUrl });
-        await sendToGoogleChat(textMessage);
+        await sendBlacklistAlert(faceDetail, alarm, { detectionImageUrl, repositoryImageUrl });
     } catch (error) {
         console.error('[Server] Failed to process alarm or send to Google Chat:', error.message);
     }
 });
 
-app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
+let subscribed = false;
 
-app.listen(config.middlewarePort, async () => {
-    console.log(`[Server] Middleware running on port ${config.middlewarePort}`);
+// 200 only once the Dahua login and alarm subscription have succeeded; 503 while
+// the application is up but cannot receive alarms.
+app.get('/health', (_req, res) => {
+    res.status(subscribed ? 200 : 503).json({ status: subscribed ? 'ok' : 'degraded', subscribed });
+});
 
+const INIT_RETRY_MS = Number(process.env.INIT_RETRY_MS) || 30 * 1000;
+
+async function initializeDahua() {
     try {
         await loginDahua();
         await subscribeAlarm();
+        subscribed = true;
     } catch (error) {
-        console.error('[Server] Dahua initialization failed:', error.message);
+        console.error(`[Server] Dahua initialization failed: ${error.message}. Retrying in ${INIT_RETRY_MS / 1000}s.`);
+        setTimeout(initializeDahua, INIT_RETRY_MS);
     }
+}
+
+app.listen(config.middlewarePort, () => {
+    console.log(`[Server] Middleware running on port ${config.middlewarePort}`);
+    initializeDahua();
 });

@@ -48,9 +48,8 @@ function scheduleKeepAlive() {
                 throw new Error('Keep-alive rejected with code 7000 (Auth failed)');
             }
 
-            // The credential used to access image URLs expires much faster than
-            // the token, so it must be refreshed on the same cadence as keep-alive,
-            // not just on the much slower token-update cycle.
+            // Dahua's documented keep-alive response returns "credential": null, so
+            // this normally does nothing; kept in case a credential is ever returned.
             if (res.data && res.data.data && res.data.data.credential) {
                 dahuaCredential = res.data.data.credential;
             }

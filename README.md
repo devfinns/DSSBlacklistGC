@@ -25,6 +25,7 @@ Fill in `.env`:
 | `MIDDLEWARE_WEBHOOK_URL` | Yes | — | Callback URL that Dahua DSS pushes alarms to |
 | `MIDDLEWARE_PORT` | No | `3000` | Port the server listens on |
 | `DAHUA_SUBSCRIBE_SIGNATURE` | No | `random_string_123` | Arbitrary string used when subscribing to Dahua alarms |
+| `INIT_RETRY_MS` | No | `30000` | Delay in milliseconds between startup login/subscribe retries |
 
 ## Running
 
@@ -40,7 +41,7 @@ pm2 start src/server.js --name dss-blacklist-gchat
 pm2 save
 ```
 
-Health check: `GET /health` → `{"status":"ok"}`
+Health check: `GET /health` → `200 {"status":"ok","subscribed":true}`, or `503 {"status":"degraded","subscribed":false}` until the Dahua login and alarm subscription succeed.
 
 ## Project Structure
 
@@ -64,4 +65,5 @@ src/
 
 ## Known Limitations
 
-- Google Chat rejects messages over 32 KB. Snapshot/reference images are embedded as base64 without compression, so a large original photo can occasionally cause a message to fail. See [DOCS.md](DOCS.md#6-face-detail-and-image-retrieval) for detail.
+- Google Chat rejects messages over 32 KB. Snapshot/reference images are embedded as base64 without compression, so a large original photo can occasionally cause Google Chat to reject the message; the alert is then resent without images. See [DOCS.md](DOCS.md#6-face-detail-and-image-retrieval) for detail.
+- Startup login and subscription are retried until they succeed, but the subscription is not renewed afterwards. If Dahua DSS restarts, restart the service.
